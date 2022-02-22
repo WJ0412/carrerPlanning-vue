@@ -6,7 +6,7 @@
             v-for="item in collegeData"
             :key="item.name"
             :label="item.name"
-            :value="item.name">
+            :value="item.id">
         </el-option>
       </el-select>
       <el-select v-model="majorValue" clearable @change="findClassByMajorName" placeholder="选择指定专业查询"
@@ -15,7 +15,7 @@
             v-for="item in majorData"
             :key="item.name"
             :label="item.name"
-            :value="item.name">
+            :value="item.id">
         </el-option>
       </el-select>
       <el-select v-model="classValue" clearable placeholder="选择指定班级查询" style="float: left;margin-left: 20px">
@@ -23,7 +23,7 @@
             v-for="item in classData"
             :key="item.name"
             :label="item.name"
-            :value="item.name">
+            :value="item.id">
         </el-option>
       </el-select>
       <el-input prefix-icon="el-icon-search" v-model="studentName" placeholder="请输入姓名或学号进行查询"
@@ -31,13 +31,13 @@
       <el-button type="primary" @click="searchStudent()" style="float: left;margin-left:20px">查询</el-button>
       <el-button type="success" @click="openAddDialog" style="float: left;margin-left:20px">新增</el-button>
     </div>
+
     <el-table ref="TeacherTableRef" :data="tableData.slice((currentPage-1)*pageSize,currentPage*pageSize)">
-      <el-table-column type="index" label="序号"></el-table-column>
-      <el-table-column prop="id" label="学生学号"></el-table-column>
+      <el-table-column prop="id" label="学生学号" width=auto></el-table-column>
       <el-table-column prop="name" label="学生姓名"></el-table-column>
-      <el-table-column prop="pwd" label="学生密码"></el-table-column>
+      <el-table-column prop="password" label="学生密码"></el-table-column>
       <el-table-column prop="sex" label="性别"></el-table-column>
-      <el-table-column prop="tel" label="手机号"></el-table-column>
+      <el-table-column prop="telephone" label="手机号"></el-table-column>
       <el-table-column prop="className" label="所属班级"></el-table-column>
       <el-table-column label="操作">
         <template slot-scope="scope">
@@ -221,8 +221,8 @@ export default {
     findMajors() {
       this.majorValue = ''
       this.classValue = ''
-      axios.post('/admin/findMajorsByCollegeName', {
-        collegeName: this.collegeValue
+      axios.post('/admin/findMajorsByNameLike', {
+        collegeId: this.collegeValue
       }).then(res => {
         if (res.data.code != 0) {
           this.$message.error(res.data.msg)
@@ -268,8 +268,8 @@ export default {
      */
     findClassByMajorName() {
       this.classValue = ''
-      axios.post('/admin/findClassByMajorName', {
-        majorName: this.majorValue
+      axios.post('/admin/findClassesLike', {
+        majorId: this.majorValue
       }).then(res => {
         if (res.data.code != 0)
           return this.$message.error(res.data.msg)
@@ -317,8 +317,10 @@ export default {
      */
     searchStudent() {
       axios.post('/admin/findStudentsLike', {
-        nameOrId: this.studentName,
-        className: this.classValue
+        collegeId: this.collegeValue,
+        majorId: this.majorValue,
+        classId: this.classValue,
+        like: this.studentName,
       }).then(res => {
         if (res.data.code != 0)
           return this.$message.error(res.data.msg)
@@ -376,16 +378,16 @@ export default {
         this.findAllStudents()
       })
     },
-    deleteStudent(row){
+    deleteStudent(row) {
       this.$confirm('真的要删除【' + row.name + '】吗？', '提示', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning'
       }).then(() => {
-        axios.post('/admin/deleteStudent',{
+        axios.post('/admin/deleteStudent', {
           id: row.id
-        }).then(res=>{
-          if (res.data.code!=0)
+        }).then(res => {
+          if (res.data.code != 0)
             return this.$message.error(res.data.msg)
           this.$message.success('删除成功')
           this.findAllStudents()

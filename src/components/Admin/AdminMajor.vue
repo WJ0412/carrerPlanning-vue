@@ -6,7 +6,7 @@
             v-for="item in collegeData"
             :key="item.name"
             :label="item.name"
-            :value="item.name">
+            :value="item.id">
         </el-option>
       </el-select>
       <el-input prefix-icon="el-icon-search" v-model="majorName" placeholder="请输入专业名称进行查询"
@@ -73,7 +73,7 @@
                 v-for="item1 in collegeData"
                 :key="item1.name"
                 :label="item1.name"
-                :value="item1.name">
+                :value="item1.Id">
             </el-option>
           </el-select>
         </el-form-item>
@@ -94,12 +94,12 @@
           <el-input v-model="addForm.id"></el-input>
         </el-form-item> -->
         <el-form-item label="所属学院" label-width="100px" required="required">
-          <el-select v-model="addForm.collegeName" style="float: left" clearable placeholder="选择指定学院查询">
+          <el-select v-model="addForm.collegeId" style="float: left" clearable placeholder="选择指定学院查询">
             <el-option
                 v-for="item1 in collegeData"
                 :key="item1.name"
                 :label="item1.name"
-                :value="item1.name">
+                :value="item1.id">
             </el-option>
           </el-select>
         </el-form-item>
@@ -127,10 +127,12 @@ export default {
       editForm: {
         name: '',
         collegeName: '',
+        collegeId: '',
         id:''
       },
       addForm: {
         name: '',
+        collegeId: '',
         collegeName: ''
         // id:''
       },  //对应于新增专业表单
@@ -151,6 +153,13 @@ export default {
       this.addDialog = false
     },
     openEditDialog(row) {
+      axios.post('/admin/findCollegesByNameLike',{
+        name: row.collegeName
+      }).then(res => {
+        if (res.data.code != 0)
+          return this.$message.error(res.data.msg)
+        this.editForm.collegeId = res.data.data[0].collegeId
+      })
       this.oldName = row.name
       this.editForm.name = row.name
       this.editForm.collegeName = row.collegeName
@@ -186,7 +195,7 @@ export default {
     searchMajor() {
       axios.post('/admin/findMajorsByNameLike', {
         name: this.majorName,
-        collegeName: this.collegeValue
+        collegeId: this.collegeValue
       }).then(res => {
         if (res.data.code != 0)
           return this.$message.error(res.data.msg)
@@ -202,7 +211,7 @@ export default {
     addMajor() {
       axios.post('/admin/addMajor', {
         name: this.addForm.name,
-        collegeName: this.addForm.collegeName // 选择的学院
+        collegeId: this.addForm.collegeId // 选择的学院
       }).then(res => {
         if (res.data.code != 0)
           return this.$message.error(res.data.msg)
@@ -219,7 +228,7 @@ export default {
       axios.post('/admin/updateMajor', {
         id: this.editForm.id,
         name: this.editForm.name,
-        collegeName: this.editForm.collegeName
+        collegeId: this.editForm.collegeId
       }).then(res => {
         if (res.data.code != 0)
           return this.$message.error(res.data.msg)

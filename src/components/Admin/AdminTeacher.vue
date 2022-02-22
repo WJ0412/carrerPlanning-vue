@@ -6,7 +6,7 @@
             v-for="item in collegeData"
             :key="item.name"
             :label="item.name"
-            :value="item.name">
+            :value="item.id">
         </el-option>
       </el-select>
       <el-input prefix-icon="el-icon-search" v-model="teacherName" placeholder="请输入姓名或工号进行查询"
@@ -14,8 +14,9 @@
       <el-button type="primary" @click="searchTeacher()" style="float: left;margin-left:20px">查询</el-button>
       <el-button type="success" @click="openAddDialog" style="float: left;margin-left:20px">新增</el-button>
     </div>
-    <el-table ref="TeacherTableRef" :data="tableData.slice((currentPage-1)*pageSize,currentPage*pageSize)">      <el-table-column
-          prop="no"
+    <el-table ref="TeacherTableRef" :data="tableData.slice((currentPage-1)*pageSize,currentPage*pageSize)">
+      <el-table-column
+          prop="id"
           label="教师工号"
           width=auto>
       </el-table-column>
@@ -25,16 +26,15 @@
           width=auto>
       </el-table-column>
       <el-table-column
-          prop="pwd"
+          prop="password"
           label="教师密码"
           width=auto>
       </el-table-column>
       <el-table-column
-          prop="tel"
+          prop="telephone"
           label="电话号码"
           width=auto>
       </el-table-column>
-      >
       <el-table-column
           prop="collegeName"
           label="所属学院"
@@ -74,25 +74,25 @@
     <el-dialog title="新增教师" :visible.sync="addFormDialog">
       <el-form :model="addForm">
         <el-form-item label="教师工号" :label-width="width" required>
-          <el-input v-model="addForm.no" placeholder="请仔细填写9位教师工号"></el-input>
+          <el-input v-model="addForm.id" placeholder="请仔细填写9位教师工号"></el-input>
         </el-form-item>
         <el-form-item label="教师姓名" :label-width="width" required>
           <el-input v-model="addForm.name"></el-input>
         </el-form-item>
         <el-form-item label="教师密码" :label-width="width" required>
-          <el-input v-model="addForm.pwd"></el-input>
+          <el-input v-model="addForm.password"></el-input>
         </el-form-item>
         <el-form-item label="电话号码" :label-width="width" required>
-          <el-input v-model="addForm.tel"></el-input>
+          <el-input v-model="addForm.telephone"></el-input>
         </el-form-item>
         <el-form-item label="所属学院" :label-width="width" required>
-          <el-select v-model="addForm.collegeName" :label-width="width" clearable placeholder="选择指定学院"
+          <el-select v-model="addForm.collegeId" :label-width="width" clearable placeholder="选择指定学院"
                      style="float: left;">
             <el-option
                 v-for="item1 in collegeData"
                 :key="item1.name"
                 :label="item1.name"
-                :value="item1.name">
+                :value="item1.id">
             </el-option>
           </el-select>
         </el-form-item>
@@ -107,16 +107,16 @@
     <el-dialog title="编辑教师信息" :visible.sync="editFormDialog">
       <el-form :model="editForm">
         <el-form-item label="教师工号" :label-width="width">
-          <el-input v-model="editForm.no" readonly></el-input>
+          <el-input v-model="editForm.id" :disabled="true"></el-input>
         </el-form-item>
         <el-form-item label="教师姓名" :label-width="width" required>
           <el-input v-model="editForm.name"></el-input>
         </el-form-item>
         <el-form-item label="教师密码" :label-width="width" required>
-          <el-input v-model="editForm.pwd"></el-input>
+          <el-input v-model="editForm.password"></el-input>
         </el-form-item>
         <el-form-item label="电话号码" :label-width="width" required>
-          <el-input v-model="editForm.tel"></el-input>
+          <el-input v-model="editForm.telephone"></el-input>
         </el-form-item>
         <el-form-item label="所属学院" :label-width="width" required>
           <el-select v-model="editForm.collegeName" :label-width="width" clearable placeholder="选择指定学院"
@@ -125,7 +125,7 @@
                 v-for="item in collegeData"
                 :key="item.name"
                 :label="item.name"
-                :value="item.name">
+                :value="item.id">
             </el-option>
           </el-select>
         </el-form-item>
@@ -140,7 +140,7 @@
       <span style="font-size: 24px">{{ teacher }}</span>
       <el-table ref="classTableRef" :data="classTableData">
         <el-table-column
-            type="index"
+            prop="id"
             label="序号"
             width=auto>
         </el-table-column>
@@ -173,17 +173,18 @@ export default {
       width: '80px',
       addFormDialog: false, //新增教师对话窗体默认不可见
       addForm: {
-        no: '',
+        id: '',
         name: '',
-        pwd: '123456',
-        tel: '',
-        collegeName: ''
+        password: '123456',
+        telephone: '',
+        collegeId: ''
       },
       editForm: {
-        no: '',
+        id: '',
         name: '',
-        pwd: '',
-        tel: '',
+        password: '',
+        telephone: '',
+        collegeId: '',
         collegeName: ''
       },
       editFormDialog: false,  //编辑教师
@@ -205,11 +206,18 @@ export default {
     },
     openEditFormDialog(row) {
       this.editFormDialog = true
-      this.editForm.no = row.no
+      this.editForm.id = row.id
       this.editForm.name = row.name
-      this.editForm.pwd = row.pwd
-      this.editForm.tel = row.tel
+      this.editForm.password = row.password
+      this.editForm.telephone = row.telephone
       this.editForm.collegeName = row.collegeName
+      axios.post('/admin/findCollegesByNameLike',{
+        name: row.collegeName
+      }).then(res => {
+        if (res.data.code != 0)
+          return this.$message.error(res.data.msg)
+        this.editForm.collegeId = res.data.data[0].collegeId
+      })
     },
     closeEditDialog() {
       this.editFormDialog = false
@@ -219,8 +227,8 @@ export default {
      */
     searchTeacher() {
       axios.post('/admin/findTeachersLike', {
-        name: this.teacherName,
-        collegeName: this.collegeValue
+        collegeId: this.collegeValue,
+        like: this.teacherName
       }).then(res => {
         if (res.data.code != 0)
           return this.$message.error(res.data.msg)
@@ -234,11 +242,11 @@ export default {
      */
     updateTeacher() {
       axios.post('/admin/updateTeacher', {
-        no: this.editForm.no,
+        id: this.editForm.id,
         name: this.editForm.name,
-        pwd: this.editForm.pwd,
-        tel: this.editForm.tel,
-        collegeName: this.editForm.collegeName
+        password: this.editForm.password,
+        telephone: this.editForm.telephone,
+        collegeId: this.editForm.collegeName
       }).then(res => {
         if (res.data.code != 0)
           return this.$message.error(res.data.msg)
@@ -252,11 +260,11 @@ export default {
      */
     addTeacher() {
       axios.post('/admin/addTeacher', {
-        no: this.addForm.no,
+        id: this.addForm.id,
         name: this.addForm.name,
-        pwd: this.addForm.pwd,
-        tel: this.addForm.tel,
-        collegeName: this.addForm.collegeName
+        password: this.addForm.password,
+        telephone: this.addForm.telephone,
+        collegeId: this.addForm.collegeId
       }).then(res => {
         if (res.data.code != 0)
           return this.$message.error(res.data.msg)
@@ -275,7 +283,7 @@ export default {
         type: 'warning'
       }).then(() => {
         axios.post('/admin/deleteTeacher', {
-          no: row.no
+          id: row.id
         }).then(res => {
           if (res.data.code != 0)
             return this.$message.error(res.data.msg)
@@ -287,10 +295,10 @@ export default {
       })
     },
     viewClass(row) {
-      this.teacher = row.no + '---' + row.name
+      this.teacher = row.id + '---' + row.name
       this.classDialog = true
-      axios.post('/admin/findClassByTeacherNo',{
-        teacherNo: row.no
+      axios.post('/admin/findClassesLike',{
+        teacherId: row.id
       }).then(res=>{
         if (res.data.code != 0){
           this.$message.error(res.data.msg)

@@ -11,7 +11,7 @@
         <el-link type="danger" @click="logout" style="color: #222;float: right;padding: 20px;">退出登录</el-link>
         <a style="color: #222;float: right;padding: 20px;">超级管理员：{{userId}} </a>
         <i class="el-icon-menu" style="float:right;font-size: 45px;color: #222;padding-top: 8px"></i>
-        <span style="position: absolute;padding-top: 20px;right: 43%;font-size: 20px;font-weight: bold">武昌工学院 - 大学生职业生涯规划网</span>
+        <span style="position: absolute;padding-top: 20px;right: 43%;font-size: 20px;font-weight: bold">大学生职业生涯规划平台</span>
       </el-menu>
     </el-header>
     <el-container>

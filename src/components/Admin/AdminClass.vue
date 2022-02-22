@@ -6,7 +6,7 @@
             v-for="item in collegeData"
             :key="item.name"
             :label="item.name"
-            :value="item.name">
+            :value="item.id">
         </el-option>
       </el-select>
       <el-select v-model="majorValue" clearable placeholder="选择指定专业查询" style="float: left;margin-left: 20px">
@@ -14,7 +14,7 @@
             v-for="item in majorData"
             :key="item.name"
             :label="item.name"
-            :value="item.name">
+            :value="item.id">
         </el-option>
       </el-select>
       <el-input prefix-icon="el-icon-search" v-model="className" placeholder="请输入班级名称进行查询"
@@ -24,18 +24,13 @@
     </div>
     <el-table ref="ClassTableRef" :data="tableData.slice((currentPage-1)*pageSize,currentPage*pageSize)">
       <el-table-column
-          type="index"
+          prop="id"
           label="序号"
           width=auto>
       </el-table-column>
       <el-table-column
-          prop="name"
-          label="班级名称"
-          width=auto>
-      </el-table-column>
-      <el-table-column
-          prop="yearName"
-          label="入学年份"
+          prop="teacherId"
+          label="教师工号"
           width=auto>
       </el-table-column>
       <el-table-column
@@ -44,13 +39,18 @@
           width=auto>
       </el-table-column>
       <el-table-column
-          prop="teacherNo"
-          label="教师工号"
+          prop="name"
+          label="班级名称"
           width=auto>
       </el-table-column>
       <el-table-column
           prop="majorName"
           label="所属专业"
+          width=auto>
+      </el-table-column>
+      <el-table-column
+          prop="year"
+          label="入学年份"
           width=auto>
       </el-table-column>
       <el-table-column label="操作" width=auto>
@@ -85,25 +85,32 @@
         <el-form-item label="班级名称" :label-width="width" required>
           <el-input v-model="addForm.name"></el-input>
         </el-form-item>
-        <el-form-item label="教师工号" :label-width="width" required>
-          <el-input v-model="addForm.teacherNo"></el-input>
-        </el-form-item>
         <el-form-item label="所属专业" :label-width="width" required>
-          <el-select v-model="addCollegeValue" clearable @change="addFindMajors" placeholder="选择指定学院查询"
+          <el-select v-model="addCollegeValue" clearable @change="addFindMajors" placeholder="选择指定学院"
                      style="float: left">
             <el-option
                 v-for="item in collegeData"
                 :key="item.name"
                 :label="item.name"
-                :value="item.name">
+                :value="item.id">
             </el-option>
           </el-select>
-          <el-select v-model="addMajorValue" clearable placeholder="选择指定专业查询" style="float: left;margin-left: 20px">
+          <el-select v-model="addMajorValue" clearable placeholder="选择指定专业" style="float: left;margin-left: 20px">
             <el-option
                 v-for="item in addMajorData"
                 :key="item.name"
                 :label="item.name"
-                :value="item.name">
+                :value="item.id">
+            </el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="所属教师" :label-width="width" required>
+          <el-select v-model="addForm.teacherNo" clearable placeholder="选择指定教师" style="float: left;">
+            <el-option
+                v-for="item in addTeacherData"
+                :key="item.name"
+                :label="item.name"
+                :value="item.id">
             </el-option>
           </el-select>
         </el-form-item>
@@ -135,21 +142,21 @@
           <el-input v-model="editForm.teacherNo"></el-input>
         </el-form-item>
         <el-form-item label="所属专业" :label-width="width" required>
-          <el-select v-model="editCollegeValue" clearable @change="editFindMajors" placeholder="选择指定学院查询"
+          <el-select v-model="editForm.collegeId" clearable @change="editFindMajors" placeholder="选择指定学院查询"
                      style="float: left">
             <el-option
                 v-for="item in collegeData"
                 :key="item.name"
                 :label="item.name"
-                :value="item.name">
+                :value="item.id">
             </el-option>
           </el-select>
-          <el-select v-model="editMajorValue" clearable placeholder="选择指定专业查询" style="float: left;margin-left: 20px">
+          <el-select v-model="editForm.majorId" clearable placeholder="选择指定专业查询" style="float: left;margin-left: 20px">
             <el-option
                 v-for="item in editMajorData"
                 :key="item.name"
                 :label="item.name"
-                :value="item.name">
+                :value="item.id">
             </el-option>
           </el-select>
         </el-form-item>
@@ -196,17 +203,23 @@ export default {
       addCollegeValue: '',
       addMajorValue: '',
       addMajorData: [],
+      addTeacherData: [],
       yearData: [],
       editForm: {
+        id: '',
         name: '',
         teacherNo: '',
-        yearName: ''
+        yearName: '',
+        majorId: '',
+        majorName: '',
+        collegeId: '',
+        collegeName: ''
       },
       editCollegeValue: '',
       editMajorValue: '',
       editMajorData: [],
       editDialog: false,
-      oldName:'',
+      oldName: '',
       currentPage: 1,
       total: 20,
       pageSize: 10,
@@ -223,11 +236,26 @@ export default {
     openEditDialog(row) {
       this.findAllYears()
       this.editDialog = true
-      this.oldName = row.name
+      this.editForm.id = row.id
       this.editForm.name = row.name
-      this.editForm.teacherNo = row.teacherNo
-      this.editForm.yearName = row.yearName
-      this.editMajorValue = row.majorName
+      this.editForm.teacherNo = row.teacherId
+      this.editForm.yearName = row.year
+      this.editForm.majorName = row.majorName
+      axios.post('/admin/findMajorsByNameLike',{
+        name: row.majorName
+      }).then(res => {
+        if (res.data.code != 0)
+          return this.$message.error(res.data.msg)
+        this.editForm.collegeName = res.data.data[0].collegeName
+        this.editForm.majorId = res.data.data[0].majorId
+      })
+      axios.post('/admin/findCollegesByNameLike',{
+        name: this.editForm.collegeName
+      }).then(res => {
+        if (res.data.code != 0)
+          return this.$message.error(res.data.msg)
+        this.editForm.collegeId = res.data.data[0].collegeId
+      })
     },
     closeEditDialog() {
       this.editDialog = false
@@ -237,8 +265,8 @@ export default {
      */
     findMajors() {
       this.majorValue = ''
-      axios.post('/admin/findMajorsByCollegeName', {
-        collegeName: this.collegeValue
+      axios.post('/admin/findMajorsByNameLike', {
+        collegeId: this.collegeValue
       }).then(res => {
         if (res.data.code != 0) {
           this.$message.error(res.data.msg)
@@ -273,9 +301,9 @@ export default {
      */
     searchClass() {
       axios.post('/admin/findClassesLike', {
-        collegeName: this.collegeValue,
-        majorName: this.majorValue,
-        name: this.className
+        name: this.className,
+        majorId: this.majorValue,
+        collegeId: this.collegeValue
       }).then(res => {
         if (res.data.code != 0)
           return this.$message.error(res.data.msg)
@@ -289,8 +317,8 @@ export default {
      */
     addFindMajors() {
       this.addMajorValue = ''
-      axios.post('/admin/findMajorsByCollegeName', {
-        collegeName: this.addCollegeValue
+      axios.post('/admin/findMajorsByNameLike', {
+        collegeId: this.addCollegeValue
       }).then(res => {
         if (res.data.code != 0) {
           this.$message.error(res.data.msg)
@@ -299,14 +327,24 @@ export default {
           this.addMajorData = res.data.data
         }
       })
+      axios.post('/admin/findTeachersLike', {
+        collegeId: this.addCollegeValue
+      }).then(res => {
+        if (res.data.code != 0) {
+          this.$message.error(res.data.msg)
+          this.addTeacherData = res.data.data
+        } else {
+          this.addTeacherData = res.data.data
+        }
+      })
     },
     /**
      * 新增班级 学院、专业数据填充
      */
     editFindMajors() {
       this.editMajorValue = ''
-      axios.post('/admin/findMajorsByCollegeName', {
-        collegeName: this.editCollegeValue
+      axios.post('/admin/findMajorsByNameLike', {
+        collegeId: this.editForm.collegeId
       }).then(res => {
         if (res.data.code != 0) {
           this.$message.error(res.data.msg)
@@ -332,9 +370,9 @@ export default {
     addClass() {
       axios.post('/admin/addClass', {
         name: this.addForm.name,
-        teacherNo: this.addForm.teacherNo,
-        majorName: this.addMajorValue,
-        yearName: this.addForm.yearName
+        teacherId: this.addForm.teacherNo,
+        majorId: this.addMajorValue,
+        year: this.addForm.yearName
       }).then(res => {
         if (res.data.code != 0)
           return this.$message.error(res.data.msg)
@@ -347,13 +385,13 @@ export default {
      * 修改班级
      */
     updateClass() {
-      axios.post('/admin/updateClass',{
-        newName: this.editForm.name,
-        teacherNo: this.editForm.teacherNo,
-        majorName: this.editMajorValue,
-        yearName: this.editForm.yearName,
-        oldName: this.oldName
-      }).then(res=>{
+      axios.post('/admin/updateClass', {
+        id: this.editForm.id,
+        name: this.editForm.name,
+        teacherId: this.editForm.teacherNo,
+        majorId: this.editForm.majorId,
+        year: this.editForm.yearName,
+      }).then(res => {
         if (res.data.code != 0)
           return this.$message.error(res.data.msg)
         this.$message.success('修改班级成功')
@@ -361,21 +399,21 @@ export default {
         this.findAllClasses()
       })
     },
-    deleteClass(row){
+    deleteClass(row) {
       this.$confirm('真的要删除【' + row.name + '】吗？', '提示', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning'
       }).then(() => {
-        axios.post('/admin/deleteClass',{
-          name: row.name
-        }).then(res=>{
+        axios.post('/admin/deleteClass', {
+          id: row.id
+        }).then(res => {
           if (res.data.code != 0)
             return this.$message.error(res.data.msg)
           this.$message.success('删除成功')
           this.findAllClasses()
         })
-      }).catch(()=>{
+      }).catch(() => {
         this.$message.info('取消删除')
       })
     },
